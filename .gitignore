@@ -1,0 +1,40 @@
+# --------------------
+# Dependencies
+# --------------------
+node_modules/
+
+# --------------------
+# Build outputs
+# --------------------
+dist/
+.next/
+out/
+
+# --------------------
+# Environment files (secrets)
+# --------------------
+.env
+.env.*.local
+
+# --------------------
+# Logs
+# --------------------
+*.log
+
+# --------------------
+# OS / Editor files
+# --------------------
+.DS_Store
+.vscode/
+.idea/
+
+# --------------------
+# pnpm internal files
+# --------------------
+node_modules/.pnpm-workspace-state-v1
+
+# --------------------
+# my comments files
+# --------------------
+steps.md
+explanations.md
