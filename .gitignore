@@ -38,3 +38,9 @@ node_modules/.pnpm-workspace-state-v1
 # --------------------
 steps.md
 explanations.md
+
+# TypeScript build cache
+*.tsbuildinfo
+
+# Next generated types (safe to ignore; will be regenerated)
+next-env.d.ts
