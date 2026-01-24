@@ -2,7 +2,10 @@ packages:
   - apps/*
   - packages/*
 
+
 onlyBuiltDependencies:
   - '@nestjs/core'
   - sharp
   - unrs-resolver
+  - '@prisma/engines'
+  - prisma

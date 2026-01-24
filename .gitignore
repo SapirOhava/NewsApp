@@ -44,3 +44,6 @@ explanations.md
 
 # Next generated types (safe to ignore; will be regenerated)
 next-env.d.ts
+
+# Prisma generated client (because schema sets output to ../generated/prisma)
+generated/
