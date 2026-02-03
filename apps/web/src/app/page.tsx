@@ -3,8 +3,9 @@ import styles from "./page.module.css";
 
 export default async function Home() {
   const baseUrl = process.env.NEXT_PUBLIC_API_URL;
-  const response = await fetch(`${baseUrl}/health`,{ cache: 'no-store' });
-  const data = await response.json();
+  // const response = await fetch(`${baseUrl}/health`,{ cache: 'no-store' });
+  // const data = await response.json();
+  const data = { message: "Hello, world!" };
   return (
     <div className={styles.page}>
       <main className={styles.main}>
