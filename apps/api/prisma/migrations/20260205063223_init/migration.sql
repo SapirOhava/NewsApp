@@ -5,8 +5,8 @@ CREATE TABLE "Article" (
     "slug" TEXT NOT NULL,
     "content" TEXT NOT NULL,
     "publishedAt" TIMESTAMP(3),
-    "source" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "Article_pkey" PRIMARY KEY ("id")
 );
