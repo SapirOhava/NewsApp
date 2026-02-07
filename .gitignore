@@ -47,3 +47,7 @@ next-env.d.ts
 
 # Prisma generated client (because schema sets output to ../generated/prisma)
 generated/
+
+# pnpm lock files in subdirectories (monorepo - only root lock file needed)
+apps/*/pnpm-lock.yaml
+packages/*/pnpm-lock.yaml
