@@ -124,3 +124,24 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* ============================================
+   Newsflash Scrolling Animation
+   ============================================ */
+
+/* Define the animation keyframes */
+@keyframes scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+/* Apply the animation to elements with .animate-scroll class */
+.animate-scroll {
+  animation: scroll 30s linear infinite;
+  display: flex;
+  width: fit-content;
+}
