@@ -36,3 +36,11 @@ model Category {
   // Relationship: One category has many articles
   articles  Article[]
 }
+
+model Newsflash {
+  id          String   @id @default(cuid())
+  title       String                          // Short headline
+  content     String                          // Short news text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
