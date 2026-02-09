@@ -12,21 +12,21 @@ export default async function HomePage() {
   const newsflashes = [
     {
       id: '1',
-      message: '🚨 Breaking: Major news update today!',
+      message: 'Breaking: Major news update today!',
       linkUrl: '/articles/breaking-news',
       priority: 10,
       status: 'PUBLISHED',
     },
     {
       id: '2',
-      message: '📢 New features coming soon - stay tuned!',
+      message: 'New features coming soon - stay tuned!',
       linkUrl: null,
       priority: 5,
       status: 'PUBLISHED',
     },
     {
       id: '3',
-      message: '⭐ Special announcement: Check out our latest articles',
+      message: 'Special announcement: Check out our latest articles',
       linkUrl: '/articles',
       priority: 8,
       status: 'PUBLISHED',

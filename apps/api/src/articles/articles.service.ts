@@ -9,21 +9,25 @@ export class ArticlesService {
   // Constructor injection: NestJS automatically provides PrismaService
   constructor(private readonly prisma: PrismaService) {}
 
-  // Get all articles
-  async findAll() {
-    // prisma.article = access to the Article table
-    // findMany() = get all records
-    return this.prisma.article.findMany({
-      orderBy: { createdAt: 'desc' }, // Newest first
-    });
-  }
+ // Get all articles (with category)
+ async findAll() {
+  return this.prisma.article.findMany({
+    orderBy: { createdAt: 'desc' },
+    include: {
+      category: true, // Include category info
+    },
+  });
+}
 
-  // Get one article by slug
-  async findOne(slug: string) {
-    return this.prisma.article.findUnique({
-      where: { slug }, // Find article where slug matches
-    });
-  }
+// Get one article by slug (with category)
+async findOne(slug: string) {
+  return this.prisma.article.findUnique({
+    where: { slug },
+    include: {
+      category: true, // Include category info
+    },
+  });
+}
 
   // Create a new article
   async create(dto: CreateArticleDto) {

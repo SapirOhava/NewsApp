@@ -20,4 +20,19 @@ model Article {
   publishedAt DateTime?                       // When published (optional - ? means can be null)
   createdAt   DateTime @default(now())       // Auto-set when created
   updatedAt   DateTime @updatedAt            // Auto-updated when changed
+  
+  // Relationship: Many articles can belong to one category
+  categoryId  String?
+  category    Category? @relation(fields: [categoryId], references: [id])
+}
+
+model Category {
+  id        String    @id @default(cuid())
+  name      String    @unique  // Category name (e.g., "Technology", "Sports")
+  slug      String    @unique  // URL-friendly version (e.g., "technology", "sports")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  
+  // Relationship: One category has many articles
+  articles  Article[]
 }

@@ -19,10 +19,10 @@ export function Navbar() {
               Home
             </Link>
             <Link 
-              href="/about" 
+              href="/login" 
               className="text-gray-700 hover:text-blue-600 transition-colors font-medium"
             >
-              About
+              Sign In
             </Link>
           </div>
         </div>

@@ -10,6 +10,22 @@ export type Article = {
   publishedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  categoryId?: string | null;
+  category?: Category | null;
+};
+
+// Type for Category
+export type Category = {
+  id: string;
+  name: string;
+  slug: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+// Type for Article with Category (for category pages)
+export type ArticleWithCategory = Article & {
+  category: Category;
 };
 
 // Fetch all articles
@@ -33,6 +49,32 @@ export async function getArticle(slug: string): Promise<Article> {
 
   if (!response.ok) {
     throw new Error('Failed to fetch article');
+  }
+
+  return response.json();
+}
+
+// Fetch all categories
+export async function getCategories(): Promise<Category[]> {
+  const response = await fetch(`${API_URL}/categories`, {
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch categories');
+  }
+
+  return response.json();
+}
+
+// Fetch articles by category slug
+export async function getArticlesByCategory(categorySlug: string): Promise<Article[]> {
+  const response = await fetch(`${API_URL}/categories/${categorySlug}/articles`, {
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch articles by category');
   }
 
   return response.json();
