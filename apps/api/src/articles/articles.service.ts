@@ -1,44 +1,70 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateArticleDto } from './dto/create-article.dto';
+import type { ArticleWithRelations } from '@newsapp/shared';
+import { mapArticleWithRelations } from './article.mapper';
 
-// @Injectable() = NestJS decorator that makes this class injectable
-// This means NestJS can automatically create instances and inject dependencies
 @Injectable()
 export class ArticlesService {
-  // Constructor injection: NestJS automatically provides PrismaService
   constructor(private readonly prisma: PrismaService) {}
 
- // Get all articles (with category)
- async findAll() {
-  return this.prisma.article.findMany({
-    orderBy: { createdAt: 'desc' },
-    include: {
-      category: true, // Include category info
-    },
-  });
-}
-
-// Get one article by slug (with category)
-async findOne(slug: string) {
-  return this.prisma.article.findUnique({
-    where: { slug },
-    include: {
-      category: true, // Include category info
-    },
-  });
-}
-
-  // Create a new article
-  async create(dto: CreateArticleDto) {
-    // dto = Data Transfer Object (the validated data from the request)
-    return this.prisma.article.create({
-      data: {
-        title: dto.title,
-        slug: dto.slug,
-        content: dto.content,
-        publishedAt: dto.publishedAt, // Can be undefined (optional)
+  /**
+   * Get all newsflashes (articles where isNewsflash = true)
+   * Ordered by most recent first
+   */
+  async findNewsflashes(): Promise<ArticleWithRelations[]> {
+    const articles = await this.prisma.article.findMany({
+      where: {
+        isNewsflash: true,
+      },
+      include: {
+        source: true,
+        category: true,
+      },
+      orderBy: {
+        rssPublishedAt: 'desc', // Most recent first
       },
     });
+
+    return articles.map(mapArticleWithRelations);
+  }
+
+  /**
+   * Get all articles with optional limit
+   * @param limit - Maximum number of articles to return (default: no limit)
+   */
+  async findAll(limit?: number): Promise<ArticleWithRelations[]> {
+    const articles = await this.prisma.article.findMany({
+      include: {
+        source: true,
+        category: true,
+      },
+      orderBy: {
+        rssPublishedAt: 'desc', // Most recent first
+      },
+      ...(limit && { take: limit }), // Apply limit if provided
+    });
+
+    return articles.map(mapArticleWithRelations);
+  }
+
+  /**
+   * Get one article by slug
+   * @param slug - Article slug
+   * @throws NotFoundException if article not found
+   */
+  async findOne(slug: string): Promise<ArticleWithRelations> {
+    const article = await this.prisma.article.findUnique({
+      where: { slug },
+      include: {
+        source: true,
+        category: true,
+      },
+    });
+
+    if (!article) {
+      throw new NotFoundException(`Article with slug "${slug}" not found`);
+    }
+
+    return mapArticleWithRelations(article);
   }
 }

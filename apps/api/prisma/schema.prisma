@@ -12,20 +12,58 @@ datasource db {
   provider = "postgresql"
 }
 
-model Article {
-  id          String   @id @default(cuid())  // Primary key, auto-generated unique ID, cuid - A function that generates a unique string like ckz.... It’s safe for distributed systems and avoids collisions.
-  title       String                          // Article title (required)
-  slug        String   @unique                // URL-friendly version of title (unique, required)
-  content     String                          // Article content (required)
-  publishedAt DateTime?                       // When published (optional - ? means can be null)
-  createdAt   DateTime @default(now())       // Auto-set when created
-  updatedAt   DateTime @updatedAt            // Auto-updated when changed
+// ============================================
+// SOURCE MODEL - RSS Feed Sources
+// ============================================
+model Source {
+  id          String   @id @default(cuid())
+  name        String   @unique  // e.g., "BBC News", "CNN", "TechCrunch"
+  slug        String   @unique  // URL-friendly: "bbc-news", "cnn"
+  websiteUrl  String            // Main website URL: "https://www.bbc.com"
+  rssFeedUrl  String   @unique  // RSS feed URL: "https://feeds.bbci.co.uk/news/rss.xml"
+  logoUrl     String?           // Optional logo/icon URL
+  isActive    Boolean  @default(true)  // Enable/disable this source
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   
-  // Relationship: Many articles can belong to one category
-  categoryId  String?
-  category    Category? @relation(fields: [categoryId], references: [id])
+  // Relationship: One source has many articles
+  articles    Article[]
 }
 
+// ============================================
+// ARTICLE MODEL - News Articles from RSS
+// ============================================
+model Article {
+  id              String   @id @default(cuid())
+  title           String                          // Article title
+  slug            String   @unique                // URL-friendly version (unique)
+  content         String                          // Full article content
+  excerpt         String?                        // Short summary (from RSS description)
+  
+  // RSS-specific fields
+  originalUrl     String   @unique               // Original article URL from RSS (prevents duplicates)
+  rssPublishedAt DateTime                        // When published in RSS feed (from RSS <pubDate>)
+  fetchedAt       DateTime @default(now())        // When we fetched it from RSS
+  
+  // Newsflash flag
+  isNewsflash     Boolean  @default(false)        // Is this article a newsflash? (articles from last 10 minutes)
+  
+  // Our timestamps
+  publishedAt     DateTime?                       // When we published it (if different from RSS)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relationships
+  sourceId        String                         // Required - every article has a source
+  source          Source   @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  
+  categoryId      String?
+  category        Category? @relation(fields: [categoryId], references: [id])
+}
+
+// ============================================
+// CATEGORY MODEL - Article Categories
+// ============================================
 model Category {
   id        String    @id @default(cuid())
   name      String    @unique  // Category name (e.g., "Technology", "Sports")
@@ -37,10 +75,3 @@ model Category {
   articles  Article[]
 }
 
-model Newsflash {
-  id          String   @id @default(cuid())
-  title       String                          // Short headline
-  content     String                          // Short news text
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}

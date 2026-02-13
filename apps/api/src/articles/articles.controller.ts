@@ -1,34 +1,47 @@
-import { Controller, Get, Post, Body, Param } from '@nestjs/common';
+import { Controller, Get, Param, Query, ParseIntPipe } from '@nestjs/common';
 import { ArticlesService } from './articles.service';
-import { CreateArticleDto } from './dto/create-article.dto';
+import type { ArticleWithRelations } from '@newsapp/shared';
 
-// @Controller('articles') = base route for all endpoints in this controller
-// This means all routes will start with /articles
-@Controller('articles')
+@Controller()
 export class ArticlesController {
-  // Constructor injection: NestJS provides ArticlesService automatically
   constructor(private readonly articlesService: ArticlesService) {}
 
-  // GET /articles
-  // @Get() = handles GET requests
-  @Get()
-  findAll() {
-    return this.articlesService.findAll();
+  /**
+   * GET /newsflash
+   * Get all newsflashes (articles where isNewsflash = true)
+   */
+  @Get('newsflash')
+  async getNewsflashes(): Promise<ArticleWithRelations[]> {
+    return this.articlesService.findNewsflashes();
   }
 
-  // GET /articles/:slug
-  // @Param('slug') = extracts the slug from the URL
-  // Example: GET /articles/my-first-article → slug = "my-first-article"
-  @Get(':slug')
-  findOne(@Param('slug') slug: string) {
+  /**
+   * GET /articles?limit=20
+   * Get all articles with optional limit query parameter
+   * @param limit - Optional limit (number of articles to return)
+   */
+  @Get('articles')
+  async findAll(
+    @Query('limit') limit?: string,
+  ): Promise<ArticleWithRelations[]> {
+    // Parse limit from query string (e.g., "20" → 20)
+    const limitNumber = limit ? parseInt(limit, 10) : undefined;
+
+    // Validate limit is a positive number if provided
+    if (limitNumber !== undefined && (isNaN(limitNumber) || limitNumber < 1)) {
+      throw new Error('Limit must be a positive number');
+    }
+
+    return this.articlesService.findAll(limitNumber);
+  }
+
+  /**
+   * GET /articles/:slug
+   * Get one article by slug
+   * @param slug - Article slug
+   */
+  @Get('articles/:slug')
+  async findOne(@Param('slug') slug: string): Promise<ArticleWithRelations> {
     return this.articlesService.findOne(slug);
-  }
-
-  // POST /articles
-  // @Body() = extracts JSON data from request body
-  // @Body() dto = automatically validates against CreateArticleDto
-  @Post()
-  create(@Body() dto: CreateArticleDto) {
-    return this.articlesService.create(dto);
   }
 }
