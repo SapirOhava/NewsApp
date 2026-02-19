@@ -42,119 +42,152 @@ async function main() {
       update: { order: category.order },
       create: category,
     });
-    createdCategories[category.slug] = created.id; // Store ID by slug for lookup
+    createdCategories[category.slug] = created.id;
   }
   console.log(`✅ Created ${categories.length} categories`);
 
   // ============================================
-  // SEED SOURCES (with verified RSS feeds)
+  // SEED SOURCES WITH FEEDS (category-specific RSS URLs)
   // ============================================
   const sourcesData = [
     {
       name: 'BBC News',
       slug: 'bbc-news',
       websiteUrl: 'https://www.bbc.com',
-      rssFeedUrl: 'https://feeds.bbci.co.uk/news/rss.xml',
       logoUrl: 'https://www.bbc.com/favicon.ico',
       isActive: true,
-      categorySlugs: ['world', 'technology', 'business', 'science', 'health', 'sports', 'entertainment'],
+      feeds: [
+        { categorySlug: 'world', rssFeedUrl: 'https://feeds.bbci.co.uk/news/world/rss.xml', name: 'BBC World News', slug: 'bbc-world' },
+        { categorySlug: 'technology', rssFeedUrl: 'https://feeds.bbci.co.uk/news/technology/rss.xml', name: 'BBC Technology', slug: 'bbc-technology' },
+        { categorySlug: 'business', rssFeedUrl: 'https://feeds.bbci.co.uk/news/business/rss.xml', name: 'BBC Business', slug: 'bbc-business' },
+        { categorySlug: 'science', rssFeedUrl: 'https://feeds.bbci.co.uk/news/science_and_environment/rss.xml', name: 'BBC Science', slug: 'bbc-science' },
+        { categorySlug: 'health', rssFeedUrl: 'https://feeds.bbci.co.uk/news/health/rss.xml', name: 'BBC Health', slug: 'bbc-health' },
+        { categorySlug: 'sports', rssFeedUrl: 'https://feeds.bbci.co.uk/sport/rss.xml', name: 'BBC Sports', slug: 'bbc-sports' },
+        { categorySlug: 'entertainment', rssFeedUrl: 'https://feeds.bbci.co.uk/news/entertainment_and_arts/rss.xml', name: 'BBC Entertainment', slug: 'bbc-entertainment' },
+      ],
     },
     {
       name: 'Reuters',
       slug: 'reuters',
       websiteUrl: 'https://www.reuters.com',
-      rssFeedUrl: 'https://www.reuters.com/world/rss',
       logoUrl: 'https://www.reuters.com/favicon.ico',
       isActive: true,
-      categorySlugs: ['world', 'business', 'technology'],
+      feeds: [
+        { categorySlug: 'world', rssFeedUrl: 'https://www.reuters.com/world/rss', name: 'Reuters World', slug: 'reuters-world' },
+        { categorySlug: 'business', rssFeedUrl: 'https://www.reuters.com/business/rss', name: 'Reuters Business', slug: 'reuters-business' },
+        { categorySlug: 'technology', rssFeedUrl: 'https://www.reuters.com/technology/rss', name: 'Reuters Technology', slug: 'reuters-technology' },
+      ],
     },
     {
       name: 'The Guardian',
       slug: 'the-guardian',
       websiteUrl: 'https://www.theguardian.com',
-      rssFeedUrl: 'https://www.theguardian.com/world/rss',
       logoUrl: 'https://www.theguardian.com/favicon.ico',
       isActive: true,
-      categorySlugs: ['world', 'technology', 'business', 'science', 'sports'],
+      feeds: [
+        { categorySlug: 'world', rssFeedUrl: 'https://www.theguardian.com/world/rss', name: 'Guardian World', slug: 'guardian-world' },
+        { categorySlug: 'technology', rssFeedUrl: 'https://www.theguardian.com/technology/rss', name: 'Guardian Technology', slug: 'guardian-technology' },
+        { categorySlug: 'business', rssFeedUrl: 'https://www.theguardian.com/business/rss', name: 'Guardian Business', slug: 'guardian-business' },
+        { categorySlug: 'science', rssFeedUrl: 'https://www.theguardian.com/science/rss', name: 'Guardian Science', slug: 'guardian-science' },
+        { categorySlug: 'sports', rssFeedUrl: 'https://www.theguardian.com/sport/rss', name: 'Guardian Sports', slug: 'guardian-sports' },
+      ],
     },
     {
       name: 'TechCrunch',
       slug: 'techcrunch',
       websiteUrl: 'https://techcrunch.com',
-      rssFeedUrl: 'https://techcrunch.com/feed/',
       logoUrl: 'https://techcrunch.com/favicon.ico',
       isActive: true,
-      categorySlugs: ['technology', 'startups', 'ai'],
+      feeds: [
+        { categorySlug: 'technology', rssFeedUrl: 'https://techcrunch.com/feed/', name: 'TechCrunch', slug: 'techcrunch-main' },
+        { categorySlug: 'startups', rssFeedUrl: 'https://techcrunch.com/tag/startups/feed/', name: 'TechCrunch Startups', slug: 'techcrunch-startups' },
+        { categorySlug: 'ai', rssFeedUrl: 'https://techcrunch.com/tag/artificial-intelligence/feed/', name: 'TechCrunch AI', slug: 'techcrunch-ai' },
+      ],
     },
     {
       name: 'The Verge',
       slug: 'the-verge',
       websiteUrl: 'https://www.theverge.com',
-      rssFeedUrl: 'https://www.theverge.com/rss/index.xml',
       logoUrl: 'https://www.theverge.com/favicon.ico',
       isActive: true,
-      categorySlugs: ['technology', 'science'],
+      feeds: [
+        { categorySlug: 'technology', rssFeedUrl: 'https://www.theverge.com/rss/index.xml', name: 'The Verge', slug: 'the-verge-main' },
+        { categorySlug: 'science', rssFeedUrl: 'https://www.theverge.com/science/rss/index.xml', name: 'The Verge Science', slug: 'the-verge-science' },
+      ],
     },
     {
       name: 'Ars Technica',
       slug: 'ars-technica',
       websiteUrl: 'https://arstechnica.com',
-      rssFeedUrl: 'https://feeds.arstechnica.com/arstechnica/index',
       logoUrl: 'https://arstechnica.com/favicon.ico',
       isActive: true,
-      categorySlugs: ['technology', 'science'],
+      feeds: [
+        { categorySlug: 'technology', rssFeedUrl: 'https://feeds.arstechnica.com/arstechnica/index', name: 'Ars Technica', slug: 'ars-technica-main' },
+        { categorySlug: 'science', rssFeedUrl: 'https://feeds.arstechnica.com/arstechnica/science', name: 'Ars Technica Science', slug: 'ars-technica-science' },
+      ],
     },
   ];
 
-  console.log('📰 Creating sources with category relationships...');
+  console.log('📰 Creating sources with feeds...');
   for (const sourceData of sourcesData) {
-    const { categorySlugs, ...sourceFields } = sourceData;
+    const { feeds, ...sourceFields } = sourceData;
     
-    // Create or update source
+    // Create or update source (no RSS URL here - it's in Feed model now)
     const source = await prisma.source.upsert({
       where: { slug: sourceFields.slug },
       update: {},
       create: sourceFields,
     });
 
-    // Get category IDs from slugs
-    const categoryIds = categorySlugs
-      .map(slug => createdCategories[slug])
-      .filter(Boolean); // Remove undefined values
+    // Create feeds for this source
+    let feedCount = 0;
+    for (const feedData of feeds) {
+      const categoryId = createdCategories[feedData.categorySlug];
+      
+      if (!categoryId) {
+        console.warn(`   ⚠️  Skipping feed "${feedData.name}": category "${feedData.categorySlug}" not found`);
+        continue;
+      }
 
-    // Create source-category relationships
-    for (const categoryId of categoryIds) {
-      await prisma.sourceCategory.upsert({
-        where: {
-          sourceId_categoryId: {
+      try {
+        await prisma.feed.upsert({
+          where: { slug: feedData.slug },
+          update: {
+            rssFeedUrl: feedData.rssFeedUrl,
+            name: feedData.name,
+            isActive: true,
+          },
+          create: {
             sourceId: source.id,
             categoryId: categoryId,
+            rssFeedUrl: feedData.rssFeedUrl,
+            name: feedData.name,
+            slug: feedData.slug,
+            isActive: true,
           },
-        },
-        update: {}, // No update needed if exists
-        create: {
-          sourceId: source.id,
-          categoryId: categoryId,
-        },
-      });
+        });
+        feedCount++;
+      } catch (error) {
+        console.error(`   ❌ Failed to create feed "${feedData.name}":`, error);
+      }
     }
 
-    console.log(`   ✓ ${source.name} - Linked to ${categoryIds.length} categories`);
+    console.log(`   ✓ ${source.name} - Created ${feedCount} feeds`);
   }
-  console.log(`✅ Created ${sourcesData.length} sources with category relationships`);
+  console.log(`✅ Created ${sourcesData.length} sources with feeds`);
 
   // ============================================
   // SUMMARY
   // ============================================
   const categoryCount = await prisma.category.count();
   const sourceCount = await prisma.source.count();
-  const sourceCategoryCount = await prisma.sourceCategory.count();
+  const feedCount = await prisma.feed.count();
   const articleCount = await prisma.article.count();
 
   console.log('\n📊 Database Summary:');
   console.log(`   Categories: ${categoryCount}`);
   console.log(`   Sources: ${sourceCount}`);
-  console.log(`   Source-Category Links: ${sourceCategoryCount}`);
+  console.log(`   Feeds: ${feedCount}`);
   console.log(`   Articles: ${articleCount}`);
   console.log('\n✅ Seed complete!');
 }

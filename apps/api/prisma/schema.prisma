@@ -13,75 +13,105 @@ datasource db {
 }
 
 // ============================================
-// SOURCE MODEL - RSS Feed Sources
+// SOURCE MODEL - Publisher (BBC, Reuters, etc.)
 // ============================================
 model Source {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  slug        String   @unique
-  websiteUrl  String
-  rssFeedUrl  String   @unique
-  logoUrl     String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  id         String   @id @default(cuid())
+  name       String   @unique
+  slug       String   @unique
+  websiteUrl String
+  logoUrl    String?
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
   // Relationships
-  articles    Article[]        // one to many
-  categories SourceCategory[]  // Many-to-many with Category
+  feeds      Feed[]
 }
 
 // ============================================
-// CATEGORY MODEL - Article Categories
+// CATEGORY MODEL - Site categories (World, Tech, etc.)
 // ============================================
 model Category {
-  id        String    @id @default(cuid())
-  name      String    @unique
-  slug      String    @unique
-  order     Int       @default(0)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relationships
-  articles  Article[]
-  sources   SourceCategory[]  // Many-to-many with Source
+  feeds     Feed[]
 }
 
 // ============================================
-// SOURCE-CATEGORY JUNCTION TABLE
+// FEED MODEL - Actual RSS endpoint per Source+Category
 // ============================================
-model SourceCategory {
+model Feed {
   id         String   @id @default(cuid())
+
   sourceId   String
   categoryId String
+
+  // RSS feed URL endpoint
+  rssFeedUrl String   @unique
+
+  // Friendly identifiers for UI/routes (e.g. "bbc-world")
+  name       String
+  slug       String   @unique
+
+  isActive   Boolean  @default(true)
   createdAt  DateTime @default(now())
-  
+  updatedAt  DateTime @updatedAt
+
+  // Relationships
   source     Source   @relation(fields: [sourceId], references: [id], onDelete: Cascade)
   category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  
-  @@unique([sourceId, categoryId])  // Prevent duplicate source-category pairs
+
+  articles   Article[]
+
+  // Prevent a publisher having multiple feeds for the same category
+  @@unique([sourceId, categoryId])
+
+  // Helpful indexes for common queries
+  @@index([sourceId])
+  @@index([categoryId])
 }
 
 // ============================================
-// ARTICLE MODEL - News Articles from RSS
+// ARTICLE MODEL - Articles ingested from RSS feeds
 // ============================================
 model Article {
-  id              String   @id @default(cuid())
-  title           String
-  slug            String   @unique
-  content         String
-  excerpt         String?
-  originalUrl     String   @unique
+  id             String   @id @default(cuid())
+  title          String
+  slug           String   @unique
+
+  // Many RSS feeds provide only summaries; you can store excerpt and keep content empty or same.
+  content        String
+  excerpt        String?
+
+  // The original article URL from publisher
+  originalUrl    String   @unique
+
+  // Published time from RSS item (pubDate/isoDate)
   rssPublishedAt DateTime
-  fetchedAt       DateTime @default(now())
-  isNewsflash     Boolean  @default(false)
-  publishedAt     DateTime?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  sourceId        String
-  source          Source   @relation(fields: [sourceId], references: [id], onDelete: Cascade)
-  
-  categoryId      String?
-  category        Category? @relation(fields: [categoryId], references: [id])
+
+  // When your system fetched it
+  fetchedAt      DateTime @default(now())
+
+  // Your app-specific fields
+  isNewsflash    Boolean  @default(false)
+  publishedAt    DateTime?
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Article belongs to a Feed (which implies Source + Category)
+  feedId         String
+  feed           Feed     @relation(fields: [feedId], references: [id], onDelete: Cascade)
+
+  //later !!!! Indexes for listing "latest in feed/category" fast
+  //@@index([feedId, rssPublishedAt])
+  //@@index([rssPublishedAt])
 }
+

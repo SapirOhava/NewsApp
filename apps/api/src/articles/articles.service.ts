@@ -17,8 +17,12 @@ export class ArticlesService {
         isNewsflash: true,
       },
       include: {
-        source: true,
-        category: true,
+        feed: {
+          include: {
+            source: true,
+            category: true,
+          },
+        },
       },
       orderBy: {
         rssPublishedAt: 'desc', // Most recent first
@@ -35,8 +39,12 @@ export class ArticlesService {
   async findAll(limit?: number): Promise<ArticleWithRelations[]> {
     const articles = await this.prisma.article.findMany({
       include: {
-        source: true,
-        category: true,
+        feed: {
+          include: {
+            source: true,
+            category: true,
+          },
+        },
       },
       orderBy: {
         rssPublishedAt: 'desc', // Most recent first
@@ -56,8 +64,12 @@ export class ArticlesService {
     const article = await this.prisma.article.findUnique({
       where: { slug },
       include: {
-        source: true,
-        category: true,
+        feed: {
+          include: {
+            source: true,
+            category: true,
+          },
+        },
       },
     });
 

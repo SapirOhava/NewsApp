@@ -6,7 +6,7 @@ const toISOString = (date: Date | null | undefined): string | null => {
   return date ? date.toISOString() : null;
 };
 
-// Map Prisma Source → Shared Source type
+// Map Prisma Source → Shared Source type (no rssFeedUrl anymore)
 export function mapSource(
   source: Prisma.SourceGetPayload<{}> | null
 ): Source | null {
@@ -17,7 +17,6 @@ export function mapSource(
     name: source.name,
     slug: source.slug,
     websiteUrl: source.websiteUrl,
-    rssFeedUrl: source.rssFeedUrl,
     logoUrl: source.logoUrl,
     isActive: source.isActive,
     createdAt: source.createdAt.toISOString(),
@@ -35,14 +34,24 @@ export function mapCategory(
     id: category.id,
     name: category.name,
     slug: category.slug,
+    order: category.order,
     createdAt: category.createdAt.toISOString(),
     updatedAt: category.updatedAt.toISOString(),
   };
 }
 
-// Map Prisma Article (with source and category) → Shared ArticleWithRelations type
+// Map Prisma Article (with feed including source and category) → Shared ArticleWithRelations type
 export function mapArticleWithRelations(
-  article: Prisma.ArticleGetPayload<{ include: { source: true; category: true } }>
+  article: Prisma.ArticleGetPayload<{ 
+    include: { 
+      feed: { 
+        include: { 
+          source: true; 
+          category: true;
+        } 
+      } 
+    } 
+  }>
 ): ArticleWithRelations {
   return {
     id: article.id,
@@ -57,10 +66,17 @@ export function mapArticleWithRelations(
     publishedAt: toISOString(article.publishedAt),
     createdAt: article.createdAt.toISOString(),
     updatedAt: article.updatedAt.toISOString(),
-    sourceId: article.sourceId,
-    source: mapSource(article.source)!,
-    categoryId: article.categoryId,
-    category: mapCategory(article.category),
+    feedId: article.feedId,
+    feed: {
+      id: article.feed.id,
+      sourceId: article.feed.sourceId,
+      categoryId: article.feed.categoryId,
+      rssFeedUrl: article.feed.rssFeedUrl,
+      name: article.feed.name,
+      slug: article.feed.slug,
+      source: mapSource(article.feed.source)!,
+      category: mapCategory(article.feed.category),
+    },
   };
 }
 
@@ -81,9 +97,7 @@ export function mapArticle(
     publishedAt: toISOString(article.publishedAt),
     createdAt: article.createdAt.toISOString(),
     updatedAt: article.updatedAt.toISOString(),
-    sourceId: article.sourceId,
-    source: null,
-    categoryId: article.categoryId,
-    category: null,
+    feedId: article.feedId,
+    feed: null,
   };
 }

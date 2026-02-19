@@ -4,6 +4,16 @@ import Parser from 'rss-parser';
 
 const parser = new Parser();
 
+interface RSSItem {
+  link?: string;
+  title?: string;
+  content?: string;
+  contentSnippet?: string;
+  description?: string;
+  pubDate?: string;
+  categories?: string[];
+}
+
 @Injectable()
 export class IngestionService {
   private readonly logger = new Logger(IngestionService.name);
@@ -11,37 +21,46 @@ export class IngestionService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Fetch and ingest articles from a single source
-   * @param sourceId - Source ID to fetch from
+   * Fetch and ingest articles from a single feed
+   * @param feedId - Feed ID to fetch from
    */
-  async ingestFromSource(sourceId: string): Promise<number> {
-    // Get source with its RSS feed URL
-    const source = await this.prisma.source.findUnique({
-      where: { id: sourceId },
+  async ingestFromFeed(feedId: string): Promise<number> {
+    // Get feed with its RSS feed URL, source, and category
+    const feed = await this.prisma.feed.findUnique({
+      where: { id: feedId },
+      include: {
+        source: true,
+        category: true,
+      },
     });
 
-    if (!source) {
-      throw new Error(`Source with ID ${sourceId} not found`);
+    if (!feed) {
+      throw new Error(`Feed with ID ${feedId} not found`);
     }
 
-    if (!source.isActive) {
-      this.logger.warn(`Source ${source.name} is inactive, skipping...`);
+    if (!feed.isActive) {
+      this.logger.warn(`Feed ${feed.name} is inactive, skipping...`);
+      return 0;
+    }
+
+    if (!feed.source.isActive) {
+      this.logger.warn(`Source ${feed.source.name} is inactive, skipping feed ${feed.name}...`);
       return 0;
     }
 
     try {
-      this.logger.log(`Fetching RSS feed from ${source.name}...`);
+      this.logger.log(`Fetching RSS feed from ${feed.source.name} - ${feed.name}...`);
       
       // Fetch and parse RSS feed
-      const feed = await parser.parseURL(source.rssFeedUrl);
+      const parsedFeed = await parser.parseURL(feed.rssFeedUrl);
       
       let createdCount = 0;
       let skippedCount = 0;
 
       // Process each RSS item
-      for (const item of feed.items || []) {
+      for (const item of parsedFeed.items || []) {
         try {
-          const created = await this.createArticleFromRSSItem(item, source.id);
+          const created = await this.createArticleFromRSSItem(item, feed.id);
           if (created) {
             createdCount++;
           } else {
@@ -54,33 +73,49 @@ export class IngestionService {
       }
 
       this.logger.log(
-        `✅ ${source.name}: Created ${createdCount} articles, skipped ${skippedCount} duplicates`
+        `✅ ${feed.source.name} - ${feed.name}: Created ${createdCount} articles, skipped ${skippedCount} duplicates`
       );
 
       return createdCount;
     } catch (error) {
-      this.logger.error(`Error fetching RSS from ${source.name}:`, error);
+      this.logger.error(`Error fetching RSS from ${feed.source.name} - ${feed.name}:`, error);
       throw error;
     }
   }
 
   /**
-   * Ingest articles from all active sources
+   * Ingest articles from all active feeds
    */
-  async ingestFromAllSources(): Promise<{ source: string; count: number }[]> {
-    const sources = await this.prisma.source.findMany({
-      where: { isActive: true },
+  async ingestFromAllFeeds(): Promise<{ feed: string; source: string; count: number }[]> {
+    const feeds = await this.prisma.feed.findMany({
+      where: { 
+        isActive: true,
+        source: {
+          isActive: true,
+        },
+      },
+      include: {
+        source: true,
+      },
     });
 
-    const results: { source: string; count: number }[] = []; 
+    const results: { feed: string; source: string; count: number }[] = [];
 
-    for (const source of sources) {
+    for (const feed of feeds) {
       try {
-        const count = await this.ingestFromSource(source.id);
-        results.push({ source: source.name, count });
+        const count = await this.ingestFromFeed(feed.id);
+        results.push({ 
+          feed: feed.name, 
+          source: feed.source.name,
+          count 
+        });
       } catch (error) {
-        this.logger.error(`Failed to ingest from ${source.name}:`, error);
-        results.push({ source: source.name, count: 0 });
+        this.logger.error(`Failed to ingest from ${feed.source.name} - ${feed.name}:`, error);
+        results.push({ 
+          feed: feed.name, 
+          source: feed.source.name,
+          count: 0 
+        });
       }
     }
 
@@ -88,24 +123,62 @@ export class IngestionService {
   }
 
   /**
+   * Ingest articles from all feeds for a specific source
+   * @param sourceId - Source ID
+   */
+  async ingestFromSource(sourceId: string): Promise<number> {
+    const feeds = await this.prisma.feed.findMany({
+      where: {
+        sourceId,
+        isActive: true,
+        source: {
+          isActive: true,
+        },
+      },
+    });
+
+    let totalCount = 0;
+    for (const feed of feeds) {
+      try {
+        const count = await this.ingestFromFeed(feed.id);
+        totalCount += count;
+      } catch (error) {
+        this.logger.error(`Failed to ingest from feed ${feed.name}:`, error);
+      }
+    }
+
+    return totalCount;
+  }
+
+  /**
    * Create article from RSS item
    * @param item - RSS feed item
-   * @param sourceId - Source ID
+   * @param feedId - Feed ID (feed already has source and category)
    * @returns true if created, false if duplicate
    */
   private async createArticleFromRSSItem(
-    item: any,
-    sourceId: string
+    item: RSSItem,
+    feedId: string
   ): Promise<boolean> {
     // Validate required fields
-    if (!item.link || !item.title || !item.contentSnippet) {
-      this.logger.warn(`Skipping item: missing required fields`, item);
+    if (!item.link || !item.title) {
+      this.logger.warn(`Skipping item: missing required fields (link or title)`, item);
       return false;
     }
 
     const originalUrl = item.link;
     const title = item.title;
+
+    // Content can come from multiple fields (RSS feeds vary)
     const content = item.content || item.contentSnippet || item.description || '';
+    
+    // If no content at all, skip this item
+    if (!content || content.trim().length === 0) {
+      this.logger.warn(`Skipping item: no content available`, { title, link: originalUrl });
+      return false;
+    }
+
+    // Excerpt: prefer contentSnippet (usually shorter), fallback to description
     const excerpt = item.contentSnippet || item.description || null;
 
     // Parse RSS published date
@@ -129,10 +202,7 @@ export class IngestionService {
     const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
     const isNewsflash = rssPublishedAt >= tenMinutesAgo;
 
-    // Try to match category (optional - you can implement category matching logic)
-    const categoryId = await this.matchCategory(item, sourceId);
-
-    // Create article
+    // Create article - category is already determined by the feed
     await this.prisma.article.create({
       data: {
         title,
@@ -143,8 +213,7 @@ export class IngestionService {
         rssPublishedAt,
         fetchedAt: new Date(),
         isNewsflash,
-        sourceId,
-        categoryId,
+        feedId, // Feed already has sourceId and categoryId
       },
     });
 
@@ -162,42 +231,5 @@ export class IngestionService {
       .replace(/\s+/g, '-') // Replace spaces with hyphens
       .replace(/-+/g, '-') // Replace multiple hyphens with single
       .substring(0, 100); // Limit length
-  }
-
-  /**
-   * Try to match RSS item to a category
-   * This is optional - you can implement based on RSS categories, keywords, etc.
-   */
-  private async matchCategory(item: any, sourceId: string): Promise<string | null> {
-    // Option 1: Use RSS categories if available
-    if (item.categories && item.categories.length > 0) {
-      const rssCategory = item.categories[0].toLowerCase();
-      
-      // Find matching category in database
-      const category = await this.prisma.category.findFirst({
-        where: {
-          slug: { contains: rssCategory },
-        },
-      });
-
-      if (category) {
-        // Check if this source has this category
-        const sourceCategory = await this.prisma.sourceCategory.findUnique({
-          where: {
-            sourceId_categoryId: {
-              sourceId,
-              categoryId: category.id,
-            },
-          },
-        });
-
-        if (sourceCategory) {
-          return category.id;
-        }
-      }
-    }
-
-    // Option 2: Return null and assign category later manually
-    return null;
   }
 }
