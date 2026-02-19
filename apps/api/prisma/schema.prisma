@@ -17,48 +17,18 @@ datasource db {
 // ============================================
 model Source {
   id          String   @id @default(cuid())
-  name        String   @unique  // e.g., "BBC News", "CNN", "TechCrunch"
-  slug        String   @unique  // URL-friendly: "bbc-news", "cnn"
-  websiteUrl  String            // Main website URL: "https://www.bbc.com"
-  rssFeedUrl  String   @unique  // RSS feed URL: "https://feeds.bbci.co.uk/news/rss.xml"
-  logoUrl     String?           // Optional logo/icon URL
-  isActive    Boolean  @default(true)  // Enable/disable this source
+  name        String   @unique
+  slug        String   @unique
+  websiteUrl  String
+  rssFeedUrl  String   @unique
+  logoUrl     String?
+  isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   
-  // Relationship: One source has many articles
-  articles    Article[]
-}
-
-// ============================================
-// ARTICLE MODEL - News Articles from RSS
-// ============================================
-model Article {
-  id              String   @id @default(cuid())
-  title           String                          // Article title
-  slug            String   @unique                // URL-friendly version (unique)
-  content         String                          // Full article content
-  excerpt         String?                        // Short summary (from RSS description)
-  
-  // RSS-specific fields
-  originalUrl     String   @unique               // Original article URL from RSS (prevents duplicates)
-  rssPublishedAt DateTime                        // When published in RSS feed (from RSS <pubDate>)
-  fetchedAt       DateTime @default(now())        // When we fetched it from RSS
-  
-  // Newsflash flag
-  isNewsflash     Boolean  @default(false)        // Is this article a newsflash? (articles from last 10 minutes)
-  
-  // Our timestamps
-  publishedAt     DateTime?                       // When we published it (if different from RSS)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
   // Relationships
-  sourceId        String                         // Required - every article has a source
-  source          Source   @relation(fields: [sourceId], references: [id], onDelete: Cascade)
-  
-  categoryId      String?
-  category        Category? @relation(fields: [categoryId], references: [id])
+  articles    Article[]        // one to many
+  categories SourceCategory[]  // Many-to-many with Category
 }
 
 // ============================================
@@ -66,12 +36,52 @@ model Article {
 // ============================================
 model Category {
   id        String    @id @default(cuid())
-  name      String    @unique  // Category name (e.g., "Technology", "Sports")
-  slug      String    @unique  // URL-friendly version (e.g., "technology", "sports")
+  name      String    @unique
+  slug      String    @unique
+  order     Int       @default(0)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   
-  // Relationship: One category has many articles
+  // Relationships
   articles  Article[]
+  sources   SourceCategory[]  // Many-to-many with Source
 }
 
+// ============================================
+// SOURCE-CATEGORY JUNCTION TABLE
+// ============================================
+model SourceCategory {
+  id         String   @id @default(cuid())
+  sourceId   String
+  categoryId String
+  createdAt  DateTime @default(now())
+  
+  source     Source   @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  
+  @@unique([sourceId, categoryId])  // Prevent duplicate source-category pairs
+}
+
+// ============================================
+// ARTICLE MODEL - News Articles from RSS
+// ============================================
+model Article {
+  id              String   @id @default(cuid())
+  title           String
+  slug            String   @unique
+  content         String
+  excerpt         String?
+  originalUrl     String   @unique
+  rssPublishedAt DateTime
+  fetchedAt       DateTime @default(now())
+  isNewsflash     Boolean  @default(false)
+  publishedAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  sourceId        String
+  source          Source   @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  
+  categoryId      String?
+  category        Category? @relation(fields: [categoryId], references: [id])
+}
