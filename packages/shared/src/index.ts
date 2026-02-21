@@ -1,34 +1,40 @@
 /**
  * Main entry point for @newsapp/shared package
- * Re-export all types from here so consumers can import from '@newsapp/shared'
+ * Re-export all schemas and types from here
  */
 
-// Source types
-export type {
-  Source,
-  CreateSourceInput,
-} from './types/source';
-
-// Feed types
-export type {
-  Feed,
-  FeedWithRelations,
-  CreateFeedInput,
-} from './types/feed';
-
-// Article types
-export type {
-  Article,
-  ArticleWithFeed,
-  ArticleWithRelations,
-  CreateArticleInput,
-} from './types/article';
-
-// Category types
-export type {
-  Category,
-  CreateCategoryInput,
+export {
+  CategorySchema,
+  CreateCategorySchema,
+  UpdateCategorySchema,
+  type Category,
+  type CreateCategoryInput,
+  type UpdateCategoryInput,
 } from './types/category';
 
-// Note: Newsflashes are just Articles with isNewsflash=true
-// Use Article types directly - no separate Newsflash types needed!
+export {
+  SourceSchema,
+  CreateSourceSchema,
+  UpdateSourceSchema,
+  type Source,
+  type CreateSourceInput,
+  type UpdateSourceInput,
+} from './types/source';
+
+export {
+  FeedSchema,
+  CreateFeedSchema,
+  UpdateFeedSchema,
+  type Feed,
+  type CreateFeedInput,
+  type UpdateFeedInput,
+} from './types/feed';
+
+export {
+  ArticleListItemSchema,
+  ArticleSchema,
+  UpdateArticleSchema,
+  type ArticleListItem,
+  type Article,
+  type UpdateArticleInput,
+} from './types/article';

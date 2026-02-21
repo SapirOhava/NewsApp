@@ -1,88 +1,47 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { CreateCategoryDto } from './dto/create-category.dto';
-import type { Category, ArticleWithRelations } from '@newsapp/shared';
-import { mapCategory } from './category.mapper';
-import { mapArticleWithRelations } from '../articles/article.mapper';
+import { Injectable, NotFoundException } from "@nestjs/common";
+import type { CreateCategoryInput, UpdateCategoryInput } from "@newsapp/shared";
+import { PrismaService } from "../prisma/prisma.service";
 
 @Injectable()
 export class CategoriesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /**
-   * Get all categories
-   */
-  async findAll(): Promise<Category[]> {
-    const categories = await this.prisma.category.findMany({
-      orderBy: { name: 'asc' }, // Alphabetical order
+  async list() {
+    return this.prisma.category.findMany({
+      orderBy: [{ order: "asc" }, { name: "asc" }],
     });
-
-    return categories.map(mapCategory).filter((c): c is Category => c !== null);
   }
 
-  /**
-   * Get one category by slug
-   * @param slug - Category slug
-   * @throws NotFoundException if category not found
-   */
-  async findOne(slug: string): Promise<Category> {
-    const category = await this.prisma.category.findUnique({
-      where: { slug },
-    });
-
-    if (!category) {
-      throw new NotFoundException(`Category with slug "${slug}" not found`);
-    }
-
-    return mapCategory(category)!;
+  async getById(id: string) {
+    const row = await this.prisma.category.findUnique({ where: { id } });
+    if (!row) throw new NotFoundException("Category not found");
+    return row;
   }
 
-  /**
-   * Get articles by category slug (5 most recent)
-   * @param categorySlug - Category slug
-   * @throws NotFoundException if category not found
-   */
-  async findArticlesByCategory(categorySlug: string): Promise<ArticleWithRelations[]> {
-    const category = await this.findOne(categorySlug); // This will throw if not found
-
-    const articles = await this.prisma.article.findMany({
-      where: {
-        categoryId: category.id,
-      },
-      orderBy: {
-        rssPublishedAt: 'desc', // Most recent first
-      },
-      take: 5, // Limit to 5 articles
-      include: {
-        source: true,
-        category: true,
-      },
-    });
-
-    return articles.map(mapArticleWithRelations);
+  async getBySlug(slug: string) {
+    const row = await this.prisma.category.findUnique({ where: { slug } });
+    if (!row) throw new NotFoundException("Category not found");
+    return row;
   }
 
-  /**
-   * Create a new category
-   * @param dto - Category data
-   * @throws ConflictException if category with slug already exists
-   */
-  async create(dto: CreateCategoryDto): Promise<Category> {
-    try {
-      const category = await this.prisma.category.create({
-        data: {
-          name: dto.name,
-          slug: dto.slug,
-        },
-      });
+  async create(input: CreateCategoryInput) {
+    return this.prisma.category.create({
+      data: {
+        name: input.name,
+        slug: input.slug,
+        order: input.order,
+      },
+    });
+  }
 
-      return mapCategory(category)!;
-    } catch (error) {
-      if (error.code === 'P2002') {
-        // Unique constraint violation
-        throw new ConflictException(`Category with slug "${dto.slug}" already exists`);
-      }
-      throw error;
-    }
+  async update(id: string, input: UpdateCategoryInput) {
+    return this.prisma.category.update({
+      where: { id },
+      data: {
+        name: input.name,
+        slug: input.slug,
+        order: input.order,
+      },
+    });
   }
 }

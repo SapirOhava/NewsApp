@@ -1,71 +1,88 @@
-import type { Category } from './category';
-import type { Source } from './source';
+import { z } from "zod";
 
 /**
- * Article type - represents a news article from RSS feed
- * Dates are strings (ISO format) because they come from JSON API
- * Base type - no relations included
+ * Reusable building blocks 
  */
-export type Article = {
-  id: string;
-  title: string;
-  slug: string;
-  content: string;
-  excerpt: string | null;
-  originalUrl: string;
-  rssPublishedAt: string;
-  fetchedAt: string;
-  isNewsflash: boolean;
-  publishedAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-  feedId: string; // Article belongs to a Feed
-};
+const IsoDateTimeSchema = z.string().datetime();
+const IdSchema = z.string().min(1);
+const UrlSchema = z.string().url();
+const SlugSchema = z
+  .string()
+  .min(2, "Slug must be at least 2 characters")
+  .max(200, "Slug must not exceed 200 characters")
+  .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Slug must be lowercase, alphanumeric, and use hyphens");
 
 /**
- * Article with feed - used when feed is included but source/category might not be
- * This is less common but useful for flexibility
+ * ============================================
+ * Article List Item (API Response)
+ * ============================================
+ *
+ * This is what you should return from endpoints like:
+ * - GET /articles
+ * - GET /feeds/:feedId/articles
+ * - GET /newsflash
+ *
+ * Why no `content`?
+ * Because lists can return 20-100 items and content is large.
  */
-export type ArticleWithFeed = Article & {
-  feed: {
-    id: string;
-    sourceId: string;
-    categoryId: string;
-    rssFeedUrl: string;
-    name: string;
-    slug: string;
-    // Feed without nested source/category
-  };
-};
+export const ArticleListItemSchema = z.object({
+  id: IdSchema,
+  title: z.string().min(1),
+  slug: SlugSchema,
+  excerpt: z.string().nullable(), // excerpt String? in Prisma → string | null
+  originalUrl: UrlSchema,
+  rssPublishedAt: IsoDateTimeSchema,
+  fetchedAt: IsoDateTimeSchema,
+  isNewsflash: z.boolean(),
+  // When your app "publishes" it (optional in DB)
+  publishedAt: IsoDateTimeSchema.nullable(),
+  feedId: IdSchema,
+  createdAt: IsoDateTimeSchema,
+  updatedAt: IsoDateTimeSchema,
+});
+
+export type ArticleListItem = z.infer<typeof ArticleListItemSchema>;
 
 /**
- * Article with full relations (feed + source + category)
- * This is the main type used in API responses
+ * ============================================
+ * Article Full (API Response)
+ * ============================================
+ *
+ * Used for:
+ * - GET /articles/:slug
+ *
+ * Same as list item, but includes `content`.
  */
-export type ArticleWithRelations = Article & {
-  feed: {
-    id: string;
-    sourceId: string;
-    categoryId: string;
-    rssFeedUrl: string;
-    name: string;
-    slug: string;
-    source: Source; // Source is always included
-    category: Category | null; // Category might be null
-  };
-};
+export const ArticleSchema = ArticleListItemSchema.extend({
+  content: z.string(), // required in Prisma
+});
+
+export type Article = z.infer<typeof ArticleSchema>;
 
 /**
- * Input type for creating an article (API request body)
+ * ============================================
+ * Update Article (PATCH) - optional/admin usage
+ * ============================================
+ *
+ * In many apps, Articles are ingested automatically (not created by users),
+ * so "create" schema may not be needed publicly.
+ *
+ * But you often want to allow updating app-specific fields:
+ * - isNewsflash
+ * - publishedAt
+ * - maybe excerpt/content (if you post-process)
  */
-export type CreateArticleInput = {
-  title: string;
-  slug: string;
-  content: string;
-  excerpt?: string | null;
-  originalUrl: string;
-  rssPublishedAt: string;
-  feedId: string;
-  publishedAt?: string | null;
-  isNewsflash?: boolean;
-};
+export const UpdateArticleSchema = z
+  .object({
+    title: z.string().min(1).optional(),
+    slug: SlugSchema.optional(),
+    content: z.string().optional(),
+    excerpt: z.string().nullable().optional(),
+    isNewsflash: z.boolean().optional(),
+    publishedAt: IsoDateTimeSchema.nullable().optional(),
+  })
+  .refine((obj) => Object.keys(obj).length > 0, {
+    message: "At least one field must be provided",
+  });
+
+export type UpdateArticleInput = z.infer<typeof UpdateArticleSchema>;

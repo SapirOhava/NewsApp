@@ -1,17 +1,13 @@
-import type { Category } from '@newsapp/shared';
-import type { Prisma } from '@prisma/client';
+import { CategorySchema, type Category } from "@newsapp/shared";
+import type { Category as PrismaCategory } from "@prisma/client";
 
-// Map Prisma Category → Shared Category type
-export function mapCategory(
-  category: Prisma.CategoryGetPayload<{}> | null
-): Category | null {
-  if (!category) return null;
-
-  return {
-    id: category.id,
-    name: category.name,
-    slug: category.slug,
-    createdAt: category.createdAt.toISOString(),
-    updatedAt: category.updatedAt.toISOString(),
-  };
+export function mapCategory(row: PrismaCategory): Category {
+  return CategorySchema.parse({
+    id: row.id,
+    name: row.name,
+    slug: row.slug,
+    order: row.order,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  });
 }

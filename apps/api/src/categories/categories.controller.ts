@@ -1,48 +1,76 @@
-import { Controller, Get, Post, Body, Param } from '@nestjs/common';
-import { CategoriesService } from './categories.service';
-import { CreateCategoryDto } from './dto/create-category.dto';
-import type { Category, ArticleWithRelations } from '@newsapp/shared';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  UsePipes,
+} from "@nestjs/common";
+import {
+  CategorySchema,
+  CreateCategorySchema,
+  UpdateCategorySchema,
+  type Category,
+  type CreateCategoryInput,
+  type UpdateCategoryInput,
+} from "@newsapp/shared";
+import { ZodValidationPipe } from "../common/pipes/zod-validation.pipe";
+import { mapCategory } from "./category.mapper";
+import { CategoriesService } from "./categories.service";
 
-@Controller('categories')
+@Controller("categories")
 export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
 
   /**
    * GET /categories
-   * Get all categories
    */
   @Get()
-  async findAll(): Promise<Category[]> {
-    return this.categoriesService.findAll();
+  async list(): Promise<Category[]> {
+    const rows = await this.categoriesService.list();
+    return rows.map(mapCategory);
   }
 
   /**
-   * GET /categories/:slug
-   * Get one category by slug
-   * @param slug - Category slug
+   * GET /categories/:id
    */
-  @Get(':slug')
-  async findOne(@Param('slug') slug: string): Promise<Category> {
-    return this.categoriesService.findOne(slug);
+  @Get(":id")
+  async getById(@Param("id") id: string): Promise<Category> {
+    const row = await this.categoriesService.getById(id);
+    return mapCategory(row);
   }
 
   /**
-   * GET /categories/:slug/articles
-   * Get articles by category slug (5 most recent)
-   * @param slug - Category slug
+   * (Optional) GET /categories/by-slug/:slug
+   * This avoids conflict between :id and :slug formats.
    */
-  @Get(':slug/articles')
-  async findArticlesByCategory(@Param('slug') slug: string): Promise<ArticleWithRelations[]> {
-    return this.categoriesService.findArticlesByCategory(slug);
+  @Get("by-slug/:slug")
+  async getBySlug(@Param("slug") slug: string): Promise<Category> {
+    const row = await this.categoriesService.getBySlug(slug);
+    return mapCategory(row);
   }
 
   /**
    * POST /categories
-   * Create a new category
-   * @param dto - Category data
    */
   @Post()
-  async create(@Body() dto: CreateCategoryDto): Promise<Category> {
-    return this.categoriesService.create(dto);
+  @UsePipes(new ZodValidationPipe(CreateCategorySchema))
+  async create(@Body() body: CreateCategoryInput): Promise<Category> {
+    const row = await this.categoriesService.create(body);
+    return mapCategory(row);
+  }
+
+  /**
+   * PATCH /categories/:id
+   */
+  @Patch(":id")
+  @UsePipes(new ZodValidationPipe(UpdateCategorySchema))
+  async update(
+    @Param("id") id: string,
+    @Body() body: UpdateCategoryInput,
+  ): Promise<Category> {
+    const row = await this.categoriesService.update(id, body);
+    return mapCategory(row);
   }
 }
