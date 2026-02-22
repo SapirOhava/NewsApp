@@ -1,22 +1,20 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import type { CreateFeedInput, UpdateFeedInput } from "@newsapp/shared";
 import { PrismaService } from "../prisma/prisma.service";
+import type { Prisma } from "@prisma/client";
 
 @Injectable()
 export class FeedsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async list(params?: { sourceId?: string; categoryId?: string; isActive?: boolean }) {
-    const where: Record<string, unknown> = {};
-
-    if (params?.sourceId) where["sourceId"] = params.sourceId;
-    if (params?.categoryId) where["categoryId"] = params.categoryId;
-    if (typeof params?.isActive === "boolean") where["isActive"] = params.isActive;
-
-    return this.prisma.feed.findMany({
-      where,
-      orderBy: [{ createdAt: "desc" }],
-    });
+    const where: Prisma.FeedWhereInput = {};
+  
+    if (params?.sourceId) where.sourceId = params.sourceId;
+    if (params?.categoryId) where.categoryId = params.categoryId;
+    if (typeof params?.isActive === "boolean") where.isActive = params.isActive;
+  
+    return this.prisma.feed.findMany({ where, orderBy: { createdAt: "desc" } });
   }
 
   async getById(id: string) {
